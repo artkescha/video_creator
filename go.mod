@@ -9,8 +9,6 @@ require (
 )
 
 require (
-	github.com/MShawon/YouTube-Viewer v0.0.0-20230407103643-6a91246cf0d3 // indirect
-	github.com/artkescha/video_creator v0.0.0-20230702220707-5d6615489f29 // indirect
 	github.com/aws/aws-sdk-go v1.38.20 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
