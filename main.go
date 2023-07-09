@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+	"video_creator/channel"
 
 	"github.com/kosa3/pexels-go"
 	"video_creator/creator"
@@ -29,8 +30,11 @@ func main() {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	rootVideoPath := filepath.Join(".", "videos")
+	tasksChan := make(chan channel.Task)
 	videoCreator := creator.New(cli, saver.VideoDownloader{}, rootVideoPath)
-	videoCreator.Start(ctx, 10*time.Second)
+	videoCreator.Start(ctx, tasksChan)
+	interval := 288 * time.Minute // 4.8 часа (5 видео в сутки)
+	channel.New("channel_1").Start(ctx, interval, tasksChan)
 
 	// handle ctr+c.
 	quit := make(chan os.Signal, 1)

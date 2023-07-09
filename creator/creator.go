@@ -8,8 +8,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
+	"video_creator/channel"
 	"video_creator/marker"
 	"video_creator/saver"
 )
@@ -30,49 +30,51 @@ func New(client *pexels.Client, saver saver.Saver, videoRootPath string) *VideoC
 	}
 }
 
-func (creator *VideoCreator) Start(ctx context.Context, createVideoInterval time.Duration) {
-	go creator.run(ctx, createVideoInterval)
+func (creator *VideoCreator) Start(ctx context.Context, tasks chan channel.Task) {
+	go creator.run(ctx, tasks)
 }
 
-func (creator *VideoCreator) run(ctx context.Context, createVideoInterval time.Duration) {
-	ticker := time.NewTicker(createVideoInterval)
-	// TODO раскомментировать при дальнейшей разработке!
+func (creator *VideoCreator) run(ctx context.Context, tasks chan channel.Task) {
 	for {
 		select {
-		case <-ticker.C:
-			theme := "Praga"
-			themePath := filepath.Join(creator.videoRootPath, theme)
+		case task := <-tasks:
+			themePath := filepath.Join(creator.videoRootPath, task.Theme)
 			if err := createFolder(themePath); err != nil {
 				log.Printf("create theme folder failed %s", err)
-				break
+				task.Result <- channel.VideoResult{Data: nil, Err: fmt.Errorf("create theme folder failed %s", err)}
+				continue
 			}
 			videoPath := filepath.Join(themePath, time.Now().String())
 			if err := createFolder(videoPath); err != nil {
 				log.Printf("create video folder failed %s", err)
-				break
+				task.Result <- channel.VideoResult{Data: nil, Err: fmt.Errorf("create video folder failed %s", err)}
+				continue
 			}
 			log.Printf("SA videoPath %s", videoPath)
-			err := creator.createVideo(ctx, theme, videoPath, 1200)
+			fullVideo, err := creator.createVideo(ctx, task.Theme, videoPath, int(task.NeedDurationSec))
 			if err != nil {
-				log.Println("create video fail fail", err)
+				log.Printf("create video fail fail %s", err)
+				task.Result <- channel.VideoResult{Data: nil, Err: fmt.Errorf("create video folder failed %s", err)}
+				continue
 			}
+			task.Result <- channel.VideoResult{
+				Data: &channel.Data{Path: fullVideo.GetFilename(), Duration: fullVideo.Duration()},
+				Err:  nil}
 
 		case <-ctx.Done():
-			ticker.Stop()
 			log.Println("video creator stop")
 			return
 		}
 	}
 }
 
-func (creator *VideoCreator) createVideo(ctx context.Context, theme string, basePath string, needDuration int) error {
+func (creator *VideoCreator) createVideo(ctx context.Context, theme string, basePath string, needDuration int) (moviego.Video, error) {
 	currentDuration := 0
 	partsPaths := make([]string, 0)
 	currentPage, err := creator.markers.Get(theme)
 	log.Printf("current page: %d", currentPage)
-
 	if err != nil {
-		return fmt.Errorf("load current page number with teme %s failed %w", theme, err)
+		return moviego.Video{}, fmt.Errorf("load current page number with teme %s failed %w", theme, err)
 	}
 
 	for currentDuration < needDuration {
@@ -85,12 +87,12 @@ func (creator *VideoCreator) createVideo(ctx context.Context, theme string, base
 			Page:  currentPage,
 		})
 		if err != nil {
-			log.Println("search failed ", err)
-			if strings.HasSuffix(err.Error(), "with status code 429") {
-				log.Println("many request - wait 1 Hour")
-				time.Sleep(1 * time.Hour)
-			}
-			continue
+			//log.Println("search failed ", err)
+			//if strings.HasSuffix(err.Error(), "with status code 429") {
+			//	log.Println("many request - wait 1 Hour")
+			//	time.Sleep(1 * time.Hour)
+			//}
+			return moviego.Video{}, fmt.Errorf("%s failed %w", theme, err)
 		}
 		for _, video := range vs.Videos {
 			path := ""
@@ -103,7 +105,7 @@ func (creator *VideoCreator) createVideo(ctx context.Context, theme string, base
 				err := creator.saver.DownloadVideo(file.Link, path)
 				if err != nil {
 					log.Printf("download video part with path %s failed %s", path, err)
-					break
+					return moviego.Video{}, fmt.Errorf("download video part with path %s failed %s", path, err)
 				}
 				partsPaths = append(partsPaths, path)
 				currentDuration += video.Duration
@@ -114,21 +116,21 @@ func (creator *VideoCreator) createVideo(ctx context.Context, theme string, base
 			currentPage++
 			log.Printf("duration is completed %d", currentDuration)
 			if err := creator.markers.Set(theme, currentPage); err != nil {
-				return fmt.Errorf("save current page number with teme %s failed %w", theme, err)
+				return moviego.Video{}, fmt.Errorf("save current page number with teme %s failed %w", theme, err)
 			}
 			break
 		}
 		currentPage++
 		if err := creator.markers.Set(theme, currentPage); err != nil {
-			return fmt.Errorf("save current page number with teme %s failed %w", theme, err)
+			return moviego.Video{}, fmt.Errorf("save current page number with teme %s failed %w", theme, err)
 		}
 	}
 	fullVideo, err := createVideoFromParts(partsPaths, basePath)
 	if err != nil {
-		return err
+		return moviego.Video{}, err
 	}
 	log.Printf("SA full video %+v", fullVideo)
-	return nil
+	return fullVideo, nil
 }
 
 func createVideoFromParts(partsPaths []string, basePath string) (moviego.Video, error) {
@@ -147,10 +149,6 @@ func createVideoFromParts(partsPaths []string, basePath string) (moviego.Video, 
 		log.Printf("moviego.Concat %s", err)
 		return moviego.Video{}, err
 	}
-	//renderErr := finalVideo.Output("final.mp4").Run()
-	//if err != nil {
-	//	return moviego.Video{}, renderErr
-	//}
 	// removed parts video
 	for _, filePath := range partsPaths {
 		if err := os.Remove(filePath); err != nil {

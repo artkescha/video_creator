@@ -3,7 +3,7 @@ module video_creator
 go 1.20
 
 require (
-	github.com/artkescha/moviego v0.0.0-20230618143743-119bff7faa7a
+	github.com/artkescha/moviego v0.0.0-20230709005812-948ef431e063
 	github.com/kosa3/pexels-go v0.0.5
 	github.com/stretchr/testify v1.5.1
 )

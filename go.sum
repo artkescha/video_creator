@@ -1,5 +1,5 @@
-github.com/artkescha/moviego v0.0.0-20230618143743-119bff7faa7a h1:t9gUCE//jUpb+j986PYOv1nVoSXFdQBGfxrWWrmMA8A=
-github.com/artkescha/moviego v0.0.0-20230618143743-119bff7faa7a/go.mod h1:lDZN0iwkaMDqR6rRmX61zQGSDDwqijwurf3bDmkqeok=
+github.com/artkescha/moviego v0.0.0-20230709005812-948ef431e063 h1:zbwxOv0PkEF70WYrQ0U8FL0W0IQvTFfREuOTlpUG4O0=
+github.com/artkescha/moviego v0.0.0-20230709005812-948ef431e063/go.mod h1:lDZN0iwkaMDqR6rRmX61zQGSDDwqijwurf3bDmkqeok=
 github.com/aws/aws-sdk-go v1.38.20 h1:QbzNx/tdfATbdKfubBpkt84OM6oBkxQZRw6+bW2GyeA=
 github.com/aws/aws-sdk-go v1.38.20/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zKMmprdro=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

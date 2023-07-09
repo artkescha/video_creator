@@ -1,4 +1,4 @@
-# github.com/artkescha/moviego v0.0.0-20230618143743-119bff7faa7a
+# github.com/artkescha/moviego v0.0.0-20230709005812-948ef431e063
 ## explicit; go 1.18
 github.com/artkescha/moviego
 # github.com/aws/aws-sdk-go v1.38.20
