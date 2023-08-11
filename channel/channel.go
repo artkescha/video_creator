@@ -1,11 +1,12 @@
 package channel
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"google.golang.org/api/youtube/v3"
 	"log"
-	"os"
+	"os/exec"
 	"time"
 )
 
@@ -31,10 +32,9 @@ type VideoResult struct {
 	Err  error
 }
 
-func New(name string, service *youtube.Service) *Channel {
+func New(name string) *Channel {
 	return &Channel{
 		name:         name,
-		service:      service,
 		videoResults: make(chan VideoResult),
 	}
 }
@@ -48,37 +48,28 @@ func (c Channel) run(ctx context.Context, interval time.Duration, tasks chan Tas
 	for {
 		select {
 		case <-ticker.C:
-			theme := "Spain"
+			theme := "Ocean"
 			duration := uint64(601)
 			tasks <- Task{Theme: theme, NeedDurationSec: duration, Result: c.videoResults}
 			// нужен таумаут не вечное ожидание
 			result := <-c.videoResults
 			log.Printf("full video result %+v", result)
-
-			upload := &youtube.Video{
-				Snippet: &youtube.VideoSnippet{
-					Title:       "beautiful " + theme,
-					Description: "in this video beautiful " + theme, // can not use non-alpha-numeric characters
-					CategoryId:  "22",
-				},
-				Status: &youtube.VideoStatus{PrivacyStatus: "unlisted"},
+			if result.Err != nil {
+				fmt.Printf("create video failed %s", result.Err)
+				continue
 			}
-
-			// The API returns a 400 Bad Request response if tags is an empty string.
-			upload.Snippet.Tags = []string{theme, "upload", "api"}
-
-			call := c.service.Videos.Insert([]string{"snippet", "status"}, upload)
-			file, err := os.Open(result.Data.Path)
+			cmd := exec.Command("./youtubeuploader", "-filename",
+				result.Data.Path, "-title", "Beautiful "+theme, "-description", "Beautiful "+theme)
+			var out bytes.Buffer
+			var stderr bytes.Buffer
+			cmd.Stdout = &out
+			cmd.Stderr = &stderr
+			err := cmd.Run()
 			if err != nil {
-				log.Fatalf("Error opening %v: %v", result.Data.Path, err)
+				fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+				continue
 			}
-			defer file.Close()
-
-			response, err := call.Media(file).Do()
-			if err != nil {
-				log.Fatalf("Error making YouTube API call: %v", err)
-			}
-			fmt.Printf("Upload successful! Video ID: %v\n", response.Id)
+			fmt.Println("upload video success: " + out.String())
 		case <-ctx.Done():
 			ticker.Stop()
 			return

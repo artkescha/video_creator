@@ -44,7 +44,7 @@ func (creator *VideoCreator) run(ctx context.Context, tasks chan channel.Task) {
 				task.Result <- channel.VideoResult{Data: nil, Err: fmt.Errorf("create theme folder failed %s", err)}
 				continue
 			}
-			videoPath := filepath.Join(themePath, time.Now().String())
+			videoPath := filepath.Join(themePath, fmt.Sprintf("%d", time.Now().UnixNano()))
 			if err := createFolder(videoPath); err != nil {
 				log.Printf("create video folder failed %s", err)
 				task.Result <- channel.VideoResult{Data: nil, Err: fmt.Errorf("create video folder failed %s", err)}
@@ -57,6 +57,7 @@ func (creator *VideoCreator) run(ctx context.Context, tasks chan channel.Task) {
 				task.Result <- channel.VideoResult{Data: nil, Err: fmt.Errorf("create video folder failed %s", err)}
 				continue
 			}
+			log.Printf("SA %s", fullVideo.GetFilename())
 			task.Result <- channel.VideoResult{
 				Data: &channel.Data{Path: fullVideo.GetFilename(), Duration: fullVideo.Duration()},
 				Err:  nil}
@@ -149,6 +150,7 @@ func createVideoFromParts(partsPaths []string, basePath string) (moviego.Video, 
 		log.Printf("moviego.Concat %s", err)
 		return moviego.Video{}, err
 	}
+	finalVideo.Output(fmt.Sprintf("%d.mp4", time.Now().UnixNano()))
 	// removed parts video
 	for _, filePath := range partsPaths {
 		if err := os.Remove(filePath); err != nil {
