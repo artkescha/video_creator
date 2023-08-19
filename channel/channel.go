@@ -1,19 +1,17 @@
 package channel
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"google.golang.org/api/youtube/v3"
 	"log"
-	"os/exec"
 	"time"
+	"video_creator/sender"
 )
 
 type Channel struct {
 	name         string
 	videoResults chan VideoResult
-	service      *youtube.Service
+	sender       sender.Sender
 }
 
 type Task struct {
@@ -32,10 +30,11 @@ type VideoResult struct {
 	Err  error
 }
 
-func New(name string) *Channel {
+func New(name string, sender sender.Sender) *Channel {
 	return &Channel{
 		name:         name,
 		videoResults: make(chan VideoResult),
+		sender:       sender,
 	}
 }
 
@@ -49,27 +48,21 @@ func (c Channel) run(ctx context.Context, interval time.Duration, tasks chan Tas
 		select {
 		case <-ticker.C:
 			theme := "Ocean"
-			duration := uint64(601)
+			duration := uint64(60)
 			tasks <- Task{Theme: theme, NeedDurationSec: duration, Result: c.videoResults}
-			// нужен таумаут не вечное ожидание
+			// нужен таумаут, не вечное ожидание
 			result := <-c.videoResults
 			log.Printf("full video result %+v", result)
 			if result.Err != nil {
 				fmt.Printf("create video failed %s", result.Err)
 				continue
 			}
-			cmd := exec.Command("./youtubeuploader", "-filename",
-				result.Data.Path, "-title", "Beautiful "+theme, "-description", "Beautiful "+theme)
-			var out bytes.Buffer
-			var stderr bytes.Buffer
-			cmd.Stdout = &out
-			cmd.Stderr = &stderr
-			err := cmd.Run()
+			output, err := c.sender.Send(result.Data.Path, "Beautiful "+theme, "Beautiful "+theme)
 			if err != nil {
-				fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+				fmt.Printf("send video with path %s failed %s", result.Data.Path, err)
 				continue
 			}
-			fmt.Println("upload video success: " + out.String())
+			fmt.Printf("send video with path %s result %s", result.Data.Path, output)
 		case <-ctx.Done():
 			ticker.Stop()
 			return
