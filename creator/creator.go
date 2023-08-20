@@ -80,9 +80,10 @@ func (creator *VideoCreator) createVideo(ctx context.Context, theme string, base
 
 	for currentDuration < needDuration {
 		// fix for many request
-		log.Println("fix for many requests, wait 121 seconds before next request")
+		//log.Println("fix for many requests, wait 121 seconds before next request")
 		// time.Sleep(121 * time.Second)
 
+		log.Printf("current page %d", currentPage)
 		vs, err := creator.pexlsClient.VideoService.Search(ctx, &pexels.VideoParams{
 			Query: theme,
 			Page:  currentPage,
