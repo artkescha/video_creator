@@ -38,7 +38,7 @@ func main() {
 	videoCreator := creator.New(cli, saver.VideoDownloader{}, rootVideoPath)
 	videoCreator.Start(ctx, tasksChan)
 	//interval := 288 * time.Minute // 4.8 часа (5 видео в сутки)
-	interval := time.Minute
+	interval := 2 * time.Minute
 	channel.New("channel_1", sender.New("./youtubeuploader")).Start(ctx, interval, tasksChan)
 
 	// handle ctr+c.

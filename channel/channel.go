@@ -47,8 +47,8 @@ func (c Channel) run(ctx context.Context, interval time.Duration, tasks chan Tas
 	for {
 		select {
 		case <-ticker.C:
-			theme := "Ocean"
-			duration := uint64(60)
+			theme := "Kosmos"
+			duration := uint64(601)
 			tasks <- Task{Theme: theme, NeedDurationSec: duration, Result: c.videoResults}
 			// нужен таумаут, не вечное ожидание
 			result := <-c.videoResults
