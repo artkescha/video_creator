@@ -103,6 +103,8 @@ func (creator *VideoCreator) createVideo(ctx context.Context, theme string, base
 					continue
 				}
 				log.Println(file, idx)
+				// задержка для избежания Raterlimiter
+				time.Sleep(2 * time.Second)
 				path = filepath.Join(basePath, fmt.Sprintf("%s-%d-%d.mp4", theme, time.Now().UnixNano(), idx))
 				err := creator.saver.DownloadVideo(file.Link, path)
 				if err != nil {
@@ -117,19 +119,16 @@ func (creator *VideoCreator) createVideo(ctx context.Context, theme string, base
 		if currentDuration >= needDuration {
 			currentPage++
 			log.Printf("duration is completed %d", currentDuration)
-			if err := creator.markers.Set(theme, currentPage); err != nil {
-				return moviego.Video{}, fmt.Errorf("save current page number with teme %s failed %w", theme, err)
-			}
 			break
 		}
 		currentPage++
-		if err := creator.markers.Set(theme, currentPage); err != nil {
-			return moviego.Video{}, fmt.Errorf("save current page number with teme %s failed %w", theme, err)
-		}
 	}
 	fullVideo, err := createVideoFromParts(partsPaths, basePath)
 	if err != nil {
 		return moviego.Video{}, err
+	}
+	if err := creator.markers.Set(theme, currentPage); err != nil {
+		return moviego.Video{}, fmt.Errorf("save current page number with teme %s failed %w", theme, err)
 	}
 	log.Printf("SA full video %+v", fullVideo)
 	return fullVideo, nil
